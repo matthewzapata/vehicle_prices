@@ -4,7 +4,8 @@ from requests import get
 import re
 
 def prep_the_soup(domain, new_or_used, year, make, model):
-    url = f'https://www.{domain}/searchused.aspx?Type={new_or_used}&Year={year}&Make={make}&Model={model}&pn=10'
+    url = f'https://www.{domain}/search{new_or_used}.aspx?Year={year}&Make={make}&Model={model}&pn=100'
+    print(url)
     response = get(url)
     soup = BeautifulSoup(response.content, 'html.parser')
     return soup
@@ -27,110 +28,86 @@ def get_years_and_models_lists(soup, make):
     return year_list, model_list
 
 def get_price_list(soup):
-    prices = soup.find_all('span', class_='pull-right primaryPrice')
+    prices = soup.find_all('div', class_="col-sm-6 col-sm-push-6 hidden-xs")
 
     price_list = []
+
     for price in prices:
-        price_list.append(price.text)
+        if price.find('span', class_='pull-right primaryPrice') == None:
+            price_block = price.find('li', class_='priceBlockItem priceBlockItemPrice')
+            price_list.append(price_block.find('span', class_='pull-right').text)
+        else:
+            price_list.append(price.find('span', class_='pull-right primaryPrice').text)
         
-    j = 1
-    for i, price in enumerate(price_list):
-        if price_list[i] == price_list[j]:
-            del price_list[i]
-        j += 1
-    
     return price_list
 
 def get_body_style_list(soup):
-    body_styles = soup.find_all('li', class_='bodyStyleDisplay')
+    body_styles = soup.find_all('ul', class_='list-unstyled srpVehicleDetails')
 
     body_style_list = []
-    for style in body_styles:
-        body_style_list.append(re.findall(r'Body Style: (.+)', style.text)[0])
-        
-    j = 1
-    for i, style in enumerate(body_style_list):
-        if body_style_list[i] == body_style_list[j]:
-            del body_style_list[i]
-        j += 1
+   
+    for body_style in body_styles:
+        body_style_list.append(re.findall(r'Body Style: (.+)', body_style.find('li', class_='bodyStyleDisplay').text)[0])
 
     return body_style_list
 
 def get_engine_list(soup):
-    engines = soup.find_all('li', class_='engineDisplay')
+    engines = soup.find_all('ul', class_='list-unstyled srpVehicleDetails')
 
     engine_list = []
-    for style in engines:
-        engine_list.append(re.findall(r'Engine: (.+)', style.text)[0])
-        
-    j = 1
-    for i, style in enumerate(engine_list):
-        if engine_list[i] == engine_list[j]:
-            del engine_list[i]
-        j += 1
+    for engine in engines:
+        engine_list.append(re.findall(r'Engine: (.+)', engine.find('li', class_='engineDisplay').text)[0])
 
     return engine_list
 
 def get_transmission_list(soup):
-    transmissions = soup.find_all('li', class_='transmissionDisplay')
+    transmissions = soup.find_all('ul', class_='list-unstyled srpVehicleDetails')
 
     transmission_list = []
-    for style in transmissions:
-        transmission_list.append(re.findall(r'Transmission: (.+)', style.text)[0])
-        
-    j = 1
-    for i, style in enumerate(transmission_list):
-        if transmission_list[i] == transmission_list[j]:
-            del transmission_list[i]
-        j += 1
+   
+    for transmission in transmissions:
+        transmission_list.append(re.findall(r'Transmission: (.+)', transmission.find('li', class_='transmissionDisplay').text)[0])
 
     return transmission_list
 
 def get_drivetrain_list(soup):
-    driveTrains = soup.find_all('li', class_='driveTrainDisplay')
+    drivetrains = soup.find_all('ul', class_='list-unstyled srpVehicleDetails')
 
     driveTrain_list = []
-    for style in driveTrains:
-        driveTrain_list.append(re.findall(r'Drive Type: (.+)', style.text)[0])
-        
-    j = 1
-    for i, style in enumerate(driveTrain_list):
-        if driveTrain_list[i] == driveTrain_list[j]:
-            del driveTrain_list[i]
-        j += 1
+   
+    for drivetrain in drivetrains:
+        driveTrain_list.append(re.findall(r'Drive Type: (.+)', drivetrain.find('li', class_='driveTrainDisplay').text)[0])
     
     return driveTrain_list
 
 def get_exterior_color_list(soup):
-    extColors = soup.find_all('li', class_='extColor')
+    exterior_colors = soup.find_all('ul', class_='list-unstyled srpVehicleDetails')
 
     extColor_list = []
-    for style in extColors:
-        extColor_list.append(re.findall(r'Ext. Color: (.+)', style.text)[0])
-        
-    j = 1
-    for i, style in enumerate(extColor_list):
-        if extColor_list[i] == extColor_list[j]:
-            del extColor_list[i]
-        j += 1
+   
+    for exterior_color in exterior_colors:
+        extColor_list.append(re.findall(r'Ext. Color: (.+)', exterior_color.find('li', class_='extColor').text)[0])
             
     return extColor_list
 
-def get_mileage_list(soup):
-    mileages = soup.find_all('li', class_='mileageDisplay')
+def get_mileage_and_condition_lists(soup):
+    mileages = soup.find_all('ul', class_='list-unstyled srpVehicleDetails')
 
     mileage_list = []
-    for style in mileages:
-        mileage_list.append(re.findall(r'Mileage: (.+)', style.text)[0])
-        
-    j = 1
-    for i, style in enumerate(mileage_list):
-        if mileage_list[i] == mileage_list[j]:
-            del mileage_list[i]
-        j += 1
-    return mileage_list
+    condition_list = []
+   
+    for mileage in mileages:
+        if mileage.find('li', class_='mileageDisplay') == None:
+            mileage_list.append(0)
+            condition_list.append('new')
+        else:
+            mileage_list.append(re.findall(r'Mileage: (.+)', mileage.find('li', class_='mileageDisplay').text)[0])
+            condition_list.append('used')
 
-def create_dataframe(domain, new_or_used, year_list, make, model_list, price_list, body_style_list, mileage_list, engine_list, transmission_list, driveTrain_list, extColor_list):
+    return mileage_list, condition_list
+
+def create_dataframe(domain, new_or_used, year_list, make, model_list, condition_list, 
+price_list, body_style_list, mileage_list, engine_list, transmission_list, driveTrain_list, extColor_list):
     if domain == 'mccombsfordwest.com':
         dealer = 'McCombs Ford West'
     elif domain == 'nsford.com':
@@ -138,15 +115,23 @@ def create_dataframe(domain, new_or_used, year_list, make, model_list, price_lis
     elif domain == 'southwayford.com':
         dealer = 'Southway Ford'
     elif domain == 'jordanford.net':
-        dealer == 'Jordan Ford'
+        dealer = 'Jordan Ford'
 
-    if new_or_used == 'U':
-        condition = 'Used'
-    else:
-        condition = 'New'
+    print(len(year_list))
+    print(len(make))
+    print(len(model_list))
+    print(len(condition_list))
+    print(len(price_list))
+    print(len(body_style_list))
+    print(len(mileage_list))
+    print(len(engine_list))
+    print(len(transmission_list))
+    print(len(driveTrain_list))
+    print(len(extColor_list))
+    print(len(dealer))
 
     df = pd.DataFrame({'year':year_list, 'make':make, 'model':model_list, 
-              'condition':condition, 'price':price_list, 
+              'condition':condition_list, 'price':price_list, 
               'body_style':body_style_list, 'mileage':mileage_list, 'engine':engine_list, 
               'transmission':transmission_list, 'drivetrain':driveTrain_list,
               'ext_color':extColor_list, 'dealer':dealer})
@@ -162,10 +147,10 @@ def get_dealership_data(domain, new_or_used, year, make, model):
     transmission_list = get_transmission_list(soup)
     drivetrain_list = get_drivetrain_list(soup)
     exterior_color_list = get_exterior_color_list(soup)
-    mileage_list = get_mileage_list(soup)
+    mileage_list, condition_list = get_mileage_and_condition_lists(soup)
     
     df = create_dataframe(domain, new_or_used, year_list, 
-    make, model_list, price_list, body_style_list, 
+    make, model_list, condition_list, price_list, body_style_list, 
     mileage_list, engine_list, transmission_list, 
     drivetrain_list, exterior_color_list)
 
