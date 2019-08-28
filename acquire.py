@@ -98,7 +98,7 @@ def get_mileage_and_condition_lists(soup):
    
     for mileage in mileages:
         if mileage.find('li', class_='mileageDisplay') == None:
-            mileage_list.append(0)
+            mileage_list.append(int(0))
             condition_list.append('new')
         else:
             mileage_list.append(re.findall(r'Mileage: (.+)', mileage.find('li', class_='mileageDisplay').text)[0])
@@ -116,6 +116,35 @@ price_list, body_style_list, mileage_list, engine_list, transmission_list, drive
         dealer = 'Southway Ford'
     elif domain == 'jordanford.net':
         dealer = 'Jordan Ford'
+    elif domain == 'ancirakiasa.com':
+        dealer = 'Ancira Kia'
+    elif domain == 'worldcarkianorth.com':
+        dealer = 'World Car Kia North'
+    elif domain == 'ancirachev.com':
+        dealer = 'Ancira Chevrolet'
+    elif domain == 'freedomchevy.com':
+        dealer = 'Freedom Chevrolet'
+    elif domain == 'mynschevy.com':
+        dealer = 'Northside Chevrolet'
+    elif domain == 'anciracjd.com':
+        dealer = 'Ancira Chrysler Jeep Dodge'
+    elif domain == 'northstardodge.net':
+        dealer = 'Northstar Dodge'
+    elif domain == 'sanantoniododgechryslerjeepram.com':
+        dealer = 'San Antonio DCJR'
+    elif domain == 'ingramparkcj.net':
+        dealer = 'Ingram Park DCJR'
+    elif domain == 'lonestarchryslerdodgejeepsanantonio.com':
+        dealer = 'Lonestar DCJR'
+    elif domain == 'northparktoyota.com':
+        dealer = 'Northpark Toyota'
+    elif domain == 'cavendertoyota.com':
+        dealer = 'Cavender Toyota'
+    elif domain == 'redmccombstoyota.com':
+        dealer = 'Red McCombs Toyota'
+    elif domain == 'universaltoyota.com':
+        dealer = 'Universal Toyota'
+    
 
     print(len(year_list))
     print(len(make))
