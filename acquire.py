@@ -2,24 +2,38 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from requests import get
 import re
+import math
 
-def prep_the_soup(domain, new_or_used, year, make, model):
-    url = f'https://www.{domain}/search{new_or_used}.aspx?Year={year}&Make={make}&Model={model}&pn=100'
+url_beginning = 'https://www.'
+
+def make_the_soup(domain, new_or_used, year, make, model):
+    url = f'{url_beginning}{domain}/search{new_or_used}.aspx?Year={year}&Make={make}&Model={model}&pn=100'
     print(url)
     response = get(url)
+    if response.status_code != 200:
+        print('Webpage did not load successfully. Skipping.')
     soup = BeautifulSoup(response.content, 'html.parser')
-    return soup
+    return soup, response.status_code
 
-def get_years_and_models_lists(soup, make):
+def determine_number_of_pages(soup):
+    max_number_of_pages = math.ceil(int(re.findall(r'(\d+) Vehicles', soup.find('p', class_='srpVehicleCount').text.strip())[0])/100)
+    return max_number_of_pages
+
+
+def get_years_and_models_lists(soup, make, i):
     vehicle_titles = soup.find_all('div', class_='row vehicleTitleContainer visible-xs')
 
+    global vehicle_titles_list
     vehicle_titles_list = []
     for vehicle_title in vehicle_titles:
         vehicle_titles_list.append(vehicle_title.text.strip())
 
-    year_list = []
-    model_list = []
-
+    if i == 1:
+        global year_list
+        year_list = []
+        global model_list
+        model_list = []
+    
     for title_element in vehicle_titles_list:
         year_and_title = re.findall(f'(\d+) {make} (.*)', title_element)
         year_list.append(year_and_title[0][0])
@@ -27,10 +41,12 @@ def get_years_and_models_lists(soup, make):
 
     return year_list, model_list
 
-def get_price_list(soup):
+def get_price_list(soup, i):
     prices = soup.find_all('div', class_="col-sm-6 col-sm-push-6 hidden-xs")
 
-    price_list = []
+    if i == 1:    
+        global price_list
+        price_list = []
 
     for price in prices:
         if price.find('span', class_='pull-right primaryPrice') == None:
@@ -41,60 +57,74 @@ def get_price_list(soup):
         
     return price_list
 
-def get_body_style_list(soup):
+def get_body_style_list(soup, i):
     body_styles = soup.find_all('ul', class_='list-unstyled srpVehicleDetails')
 
-    body_style_list = []
+    if i == 1:
+        global body_style_list
+        body_style_list = []
    
     for body_style in body_styles:
         body_style_list.append(re.findall(r'Body Style: (.+)', body_style.find('li', class_='bodyStyleDisplay').text)[0])
 
     return body_style_list
 
-def get_engine_list(soup):
+def get_engine_list(soup, i):
     engines = soup.find_all('ul', class_='list-unstyled srpVehicleDetails')
 
-    engine_list = []
+    if i == 1:
+        global engine_list
+        engine_list = []
+    
     for engine in engines:
         engine_list.append(re.findall(r'Engine: (.+)', engine.find('li', class_='engineDisplay').text)[0])
 
     return engine_list
 
-def get_transmission_list(soup):
+def get_transmission_list(soup, i):
     transmissions = soup.find_all('ul', class_='list-unstyled srpVehicleDetails')
 
-    transmission_list = []
+    if i == 1:
+        global transmission_list
+        transmission_list = []
    
     for transmission in transmissions:
         transmission_list.append(re.findall(r'Transmission: (.+)', transmission.find('li', class_='transmissionDisplay').text)[0])
 
     return transmission_list
 
-def get_drivetrain_list(soup):
+def get_drivetrain_list(soup, i):
     drivetrains = soup.find_all('ul', class_='list-unstyled srpVehicleDetails')
 
-    driveTrain_list = []
+    if i == 1:
+        global driveTrain_list
+        driveTrain_list = []
    
     for drivetrain in drivetrains:
         driveTrain_list.append(re.findall(r'Drive Type: (.+)', drivetrain.find('li', class_='driveTrainDisplay').text)[0])
     
     return driveTrain_list
 
-def get_exterior_color_list(soup):
+def get_exterior_color_list(soup, i):
     exterior_colors = soup.find_all('ul', class_='list-unstyled srpVehicleDetails')
 
-    extColor_list = []
+    if i == 1:
+        global extColor_list
+        extColor_list = []
    
     for exterior_color in exterior_colors:
         extColor_list.append(re.findall(r'Ext. Color: (.+)', exterior_color.find('li', class_='extColor').text)[0])
             
     return extColor_list
 
-def get_mileage_and_condition_lists(soup):
+def get_mileage_and_condition_lists(soup, i):
     mileages = soup.find_all('ul', class_='list-unstyled srpVehicleDetails')
 
-    mileage_list = []
-    condition_list = []
+    if i == 1:
+        global mileage_list
+        mileage_list = []
+        global condition_list
+        condition_list = []
    
     for mileage in mileages:
         if mileage.find('li', class_='mileageDisplay') == None:
@@ -105,6 +135,10 @@ def get_mileage_and_condition_lists(soup):
             condition_list.append('used')
 
     return mileage_list, condition_list
+
+def grab_next_page_url(soup):
+    new_url_ending = soup.find('ul', class_='pagination margin-x').find_all('a')[1]['href']
+    return new_url_ending
 
 def create_dataframe(domain, new_or_used, year_list, make, model_list, condition_list, 
 price_list, body_style_list, mileage_list, engine_list, transmission_list, driveTrain_list, extColor_list):
@@ -118,8 +152,6 @@ price_list, body_style_list, mileage_list, engine_list, transmission_list, drive
         dealer = 'Jordan Ford'
     elif domain == 'ancirakiasa.com':
         dealer = 'Ancira Kia'
-    elif domain == 'worldcarkianorth.com':
-        dealer = 'World Car Kia North'
     elif domain == 'ancirachev.com':
         dealer = 'Ancira Chevrolet'
     elif domain == 'freedomchevy.com':
@@ -168,19 +200,33 @@ price_list, body_style_list, mileage_list, engine_list, transmission_list, drive
     return df
 
 def get_dealership_data(domain, new_or_used, year, make, model):
-    soup = prep_the_soup(domain, new_or_used, year, make, model)
-    year_list, model_list = get_years_and_models_lists(soup, make)
-    price_list = get_price_list(soup)
-    body_style_list = get_body_style_list(soup)
-    engine_list = get_engine_list(soup)
-    transmission_list = get_transmission_list(soup)
-    drivetrain_list = get_drivetrain_list(soup)
-    exterior_color_list = get_exterior_color_list(soup)
-    mileage_list, condition_list = get_mileage_and_condition_lists(soup)
-    
-    df = create_dataframe(domain, new_or_used, year_list, 
-    make, model_list, condition_list, price_list, body_style_list, 
-    mileage_list, engine_list, transmission_list, 
-    drivetrain_list, exterior_color_list)
+    soup, website_response = make_the_soup(domain, new_or_used, year, make, model)
+    if website_response == 200:
+        max_number_of_pages = determine_number_of_pages(soup)
+        if max_number_of_pages != 0:
+            for i in range (1, max_number_of_pages+1):
+                if i != 1:
+                    new_url = f'{url_beginning}{domain}{new_url_ending}'
+                    print(new_url)
+                    response = get(new_url)
+                    if response.status_code != 200:
+                        print('Webpage did not load successfully.')
+                    soup = BeautifulSoup(response.content, 'html.parser')    
+                    
+                year_list, model_list = get_years_and_models_lists(soup, make, i)
+                price_list = get_price_list(soup, i)
+                body_style_list = get_body_style_list(soup, i)
+                engine_list = get_engine_list(soup, i)
+                transmission_list = get_transmission_list(soup, i)
+                drivetrain_list = get_drivetrain_list(soup, i)
+                exterior_color_list = get_exterior_color_list(soup, i)
+                mileage_list, condition_list = get_mileage_and_condition_lists(soup, i)
+                if i != max_number_of_pages:
+                    new_url_ending = grab_next_page_url(soup)
 
-    return df
+            df = create_dataframe(domain, new_or_used, year_list, 
+            make, model_list, condition_list, price_list, body_style_list, 
+            mileage_list, engine_list, transmission_list, 
+            drivetrain_list, exterior_color_list)
+
+            return df
